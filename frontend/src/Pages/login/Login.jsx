@@ -23,17 +23,19 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Signup from "../Signup/Signup";
+
 const intial = {
   email: "",
   password: "",
 };
+
 const LoginPage = () => {
   const [loginData, setLoginData] = useState(intial);
   const [email, setEmail] = useState();
   const [password, setPassword] = useState();
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-const navigate=useNavigate()
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
 
@@ -68,6 +70,7 @@ const navigate=useNavigate()
 
   const loginUser = (info) => {
     try {
+      setLoading(true);
       const response = fetch(`${process.env.REACT_APP_BASEURL}/api/v1/auth/login`, {
         method: "POST",
         headers: {
@@ -81,16 +84,17 @@ const navigate=useNavigate()
             localStorage.setItem("token", out.token);
             localStorage.setItem("userData", JSON.stringify(out.user));
             localStorage.setItem("auth", JSON.stringify(true));
+            localStorage.setItem("role", "user");
             showToastMessage()
             setTimeout(()=>{
+                setLoading(false);
                 navigate("/")
             },1500)
-         
            
            
           } else {
-            // Registration failed, handle accordingly
-            // alert(out.message);
+            // Login failed, handle accordingly
+            setLoading(false);
             Swal.fire({
               icon: 'error',
               title: 'Oops...',
@@ -100,27 +104,42 @@ const navigate=useNavigate()
                   container.style.zIndex = 10000;
                 }
             });
-
-            // console.log("2",out.message);
-            // console.log("2", out);
-            // console.log('Failed to register user');
           }
+        })
+        .catch((error) => {
+          setLoading(false);
+          console.log("Login error:", error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Login Failed',
+            text: 'An error occurred during login',
+            didOpen: () => {
+                const container = document.querySelector('.swal2-container');
+                container.style.zIndex = 10000;
+              }
+          });
         });
     } catch (error) {
-      //   console.error("Error registering user:", error);
-      //   setAuth(false)
-      console.log("out.2", error);
+      setLoading(false);
+      console.log("Error:", error);
     }
   };
  
 
   const handlesign = () => {
-    // setLoading(true);
-    
+    if (!email || !password) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'Please enter both email and password',
+        didOpen: () => {
+            const container = document.querySelector('.swal2-container');
+            container.style.zIndex = 10000;
+          }
+      });
+      return;
+    }
     loginUser(loginData);
-    
-    // console.log(loginData)
-    // setLoading(false);
   };
 
   const handleOpen = () => {
@@ -247,7 +266,18 @@ const navigate=useNavigate()
                     <Signup/>
                  
                 </Link>
-                <Link fontSize={"15px"} fontWeight={"500"} textDecoration={"underline"} href="/adminlogin">Login as Admin?</Link>
+                <Link 
+                  fontSize={"15px"} 
+                  fontWeight={"500"} 
+                  textDecoration={"underline"}
+                  onClick={() => {
+                    handleClose();
+                    navigate("/adminlogin");
+                  }}
+                  cursor="pointer"
+                >
+                  Login as Admin?
+                </Link>
               </HStack>
             </Box>
           </ModalBody>

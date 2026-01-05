@@ -88,7 +88,7 @@ const MobileNav = () => {
             gridTemplateColumns={"repeat(2,1fr)"}
             gap={"15px"}
           >
-            <Link to="Wishlist Route">
+            <Link to="/wishlist">
               <Box
                 fontSize="15px"
                 p="4% 0%"

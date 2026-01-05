@@ -164,7 +164,7 @@ const Navbar = () => {
                   _hover={{ bg: "white" }}
                   fontSize="16px"
                   fontWeight="400"
-                  //   onClick={() => navigate("History Route")}  history route need to be added
+                  onClick={() => navigate("/myorders")}
                 >
                   Track Order
                 </Button>
@@ -188,21 +188,83 @@ const Navbar = () => {
                       </Box>
                     </PopoverTrigger>
                     <PopoverContent
-                      w="120px"
+                      w="150px"
                       boxShadow={"rgba(0, 0, 0, 0.24) 0px 3px 8px"}
                     >
                       <PopoverBody
-                        h={"40px"}
-                        pl="6"
-                        fontSize="15px"
-                        _hover={{ fontWeight: "bold" }}
+                        fontSize="14px"
                       >
+                        {userdata.role === "admin" && (
+                          <>
+                            <Box
+                              color="#333368"
+                              p="2"
+                              _hover={{ fontWeight: "bold", bg: "gray.100" }}
+                              cursor="pointer"
+                              onClick={() => navigate("/admindashboard")}
+                            >
+                              Dashboard
+                            </Box>
+                            <Box
+                              color="#333368"
+                              p="2"
+                              _hover={{ fontWeight: "bold", bg: "gray.100" }}
+                              cursor="pointer"
+                              onClick={() => navigate("/adminproducts")}
+                            >
+                              Products
+                            </Box>
+                            <Box
+                              color="#333368"
+                              p="2"
+                              _hover={{ fontWeight: "bold", bg: "gray.100" }}
+                              cursor="pointer"
+                              onClick={() => navigate("/adminorders")}
+                            >
+                              Orders
+                            </Box>
+                            <Box
+                              color="#333368"
+                              p="2"
+                              _hover={{ fontWeight: "bold", bg: "gray.100" }}
+                              cursor="pointer"
+                              onClick={() => navigate("/allusers")}
+                            >
+                              Users
+                            </Box>
+                            <Box
+                              borderTop="1px solid #e2e8f0"
+                              my="2"
+                            ></Box>
+                          </>
+                        )}
+                        {userdata.role === "user" && (
+                          <>
+                            <Box
+                              color="#333368"
+                              p="2"
+                              _hover={{ fontWeight: "bold", bg: "gray.100" }}
+                              cursor="pointer"
+                              onClick={() => navigate("/myorders")}
+                            >
+                              My Orders
+                            </Box>
+                            <Box
+                              borderTop="1px solid #e2e8f0"
+                              my="2"
+                            ></Box>
+                          </>
+                        )}
                         <Box
                           color="#333368"
+                          p="2"
+                          _hover={{ fontWeight: "bold", bg: "gray.100" }}
+                          cursor="pointer"
                           onClick={() => {
                             localStorage.removeItem("auth");
                             localStorage.removeItem("userData");
                             localStorage.removeItem("token");
+                            localStorage.removeItem("role");
                             showToastMessage();
                             setTimeout(() => {
                               navigate("/");
@@ -229,7 +291,7 @@ const Navbar = () => {
                   fontSize="16px"
                   _hover={{ bg: "white" }}
                   fontWeight="400"
-                  //   onClick={() => navigate("Wishlist Route")}
+                  onClick={() => navigate("/wishlist")}
                 >
                   Wishlist
                 </Button>

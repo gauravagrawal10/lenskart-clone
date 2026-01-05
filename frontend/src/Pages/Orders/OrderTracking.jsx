@@ -23,6 +23,7 @@ import {
   Stepper,
 } from '@chakra-ui/react';
 import axios from 'axios';
+import { getOrderStatusFromDate, getDaysElapsed, getNextStatusUpdate, formatDate } from '../../utils/orderStatusHelper';
 
 const OrderTracking = () => {
   const { orderId } = useParams();
@@ -68,7 +69,7 @@ const OrderTracking = () => {
     }
   };
 
-  const statusSteps = ['Placed', 'Shipped', 'Delivered'];
+  const statusSteps = ['Placed', 'Shipped', 'Out for Delivery', 'Delivered'];
   const getStepIndex = (status) => {
     const index = statusSteps.indexOf(status);
     return index >= 0 ? index : 0;
@@ -77,6 +78,7 @@ const OrderTracking = () => {
   const statusColors = {
     Placed: 'blue',
     Shipped: 'orange',
+    'Out for Delivery': 'purple',
     Delivered: 'green',
     Cancelled: 'red',
   };
@@ -84,7 +86,10 @@ const OrderTracking = () => {
   if (loading) return <Center mt={10}><Text>Loading...</Text></Center>;
   if (!order) return <Center mt={10}><Text>Order not found.</Text></Center>;
 
-  const currentStep = getStepIndex(order.status);
+  const calculatedStatus = getOrderStatusFromDate(order.createdAt);
+  const currentStep = getStepIndex(calculatedStatus);
+  const daysElapsed = getDaysElapsed(order.createdAt);
+  const nextUpdate = getNextStatusUpdate(order.createdAt);
 
   return (
     <Box w="90%" maxW="900px" m="20px auto">
@@ -96,9 +101,10 @@ const OrderTracking = () => {
           <VStack align="start">
             <Heading size="lg">{order.title}</Heading>
             <Text fontSize="sm" color="gray.600">Order ID: {order._id}</Text>
+            <Text fontSize="xs" color="gray.500">Ordered on: {formatDate(order.createdAt)}</Text>
           </VStack>
-          <Badge colorScheme={statusColors[order.status]} fontSize="lg" p={2}>
-            {order.status}
+          <Badge colorScheme={statusColors[calculatedStatus]} fontSize="lg" p={2}>
+            {calculatedStatus}
           </Badge>
         </HStack>
         <Divider my={4} />
@@ -115,6 +121,10 @@ const OrderTracking = () => {
             <Text fontWeight="bold">Total</Text>
             <Text fontSize="lg" fontWeight="bold">₹{order.price * order.quantity}</Text>
           </VStack>
+          <VStack align="start">
+            <Text fontWeight="bold">Days Elapsed</Text>
+            <Text>{daysElapsed} days</Text>
+          </VStack>
         </HStack>
       </Box>
 
@@ -123,72 +133,63 @@ const OrderTracking = () => {
         <Image src={order.image} maxH="300px" mx="auto" objectFit="cover" borderRadius="md" />
       </Box>
 
-      {/* Tracking Timeline - Only show if not Cancelled */}
-      {order.status !== 'Cancelled' && (
-        <Box borderWidth="1px" borderRadius="md" p={6} mb={6}>
-          <Heading size="md" mb={6}>Order Timeline</Heading>
+      {/* Tracking Timeline */}
+      <Box borderWidth="1px" borderRadius="md" p={6} mb={6} bg="white">
+        <Heading size="md" mb={6}>Order Status Timeline</Heading>
+        <VStack align="start" spacing={4}>
+          <Text fontSize="sm" color="gray.600">
+            Order was placed {daysElapsed} days ago. Status updates automatically over 6 days.
+          </Text>
           <Stepper index={currentStep} orientation="vertical" gap="0">
-            {statusSteps.map((status, index) => (
-              <Step key={status}>
-                <StepIndicator>
-                  <StepStatus
-                    complete={<StepIcon />}
-                    incomplete={<StepNumber />}
-                    active={<StepNumber />}
-                  />
-                </StepIndicator>
-                <Box flex="1">
-                  <StepTitle>{status}</StepTitle>
-                  <StepDescription>
-                    {index <= currentStep ? (
-                      <Text color="green.500" fontSize="sm">
-                        ✓ {status === 'Placed' ? 'Order confirmed' : status === 'Shipped' ? 'On the way' : 'Delivered successfully'}
-                      </Text>
-                    ) : (
-                      <Text color="gray.500" fontSize="sm">Pending</Text>
-                    )}
-                  </StepDescription>
-                </Box>
-                {index < statusSteps.length - 1 && <StepSeparator />}
-              </Step>
-            ))}
+            {statusSteps.map((status, index) => {
+              const isComplete = index < currentStep;
+              const isActive = index === currentStep;
+              const daysForStatus = 
+                status === 'Placed' ? 0 :
+                status === 'Shipped' ? 4 :
+                status === 'Out for Delivery' ? 5 : 6;
+              
+              return (
+                <Step key={status}>
+                  <StepIndicator>
+                    <StepStatus
+                      complete={<StepIcon />}
+                      incomplete={<StepNumber />}
+                      active={<StepNumber />}
+                    />
+                  </StepIndicator>
+                  <Box flex="1" pb={index < statusSteps.length - 1 ? 6 : 0}>
+                    <StepTitle fontWeight="bold">{status}</StepTitle>
+                    <StepDescription>
+                      {isComplete && (
+                        <Text color="green.500" fontSize="sm" fontWeight="500">
+                          ✓ Completed
+                        </Text>
+                      )}
+                      {isActive && (
+                        <VStack align="start" spacing={1}>
+                          <Text color="blue.600" fontSize="sm" fontWeight="500">
+                            ● Currently in progress
+                          </Text>
+                          {nextUpdate && (
+                            <Text color="gray.600" fontSize="xs">
+                              Updates by: {formatDate(nextUpdate)}
+                            </Text>
+                          )}
+                        </VStack>
+                      )}
+                      {!isComplete && !isActive && (
+                        <Text color="gray.500" fontSize="sm">
+                          Expected on day {daysForStatus}
+                        </Text>
+                      )}
+                    </StepDescription>
+                  </Box>
+                  {index < statusSteps.length - 1 && <StepSeparator />}
+                </Step>
+              );
+            })}
           </Stepper>
-        </Box>
-      )}
-
-      {/* Cancelled Status */}
-      {order.status === 'Cancelled' && (
-        <Box borderWidth="1px" borderRadius="md" p={6} mb={6} borderColor="red.200" bg="red.50">
-          <Heading size="md" color="red.600" mb={2}>Order Cancelled</Heading>
-          <Text color="red.600">This order has been cancelled. Contact support for more details.</Text>
-        </Box>
-      )}
-
-      {/* Order Details */}
-      <Box borderWidth="1px" borderRadius="md" p={6}>
-        <Heading size="md" mb={4}>Order Details</Heading>
-        <VStack align="start" spacing={3}>
-          <HStack justify="space-between" w="100%">
-            <Text fontWeight="bold">Customer Name:</Text>
-            <Text>{order.userName}</Text>
-          </HStack>
-          <HStack justify="space-between" w="100%">
-            <Text fontWeight="bold">Product:</Text>
-            <Text>{order.title}</Text>
-          </HStack>
-          <HStack justify="space-between" w="100%">
-            <Text fontWeight="bold">Quantity:</Text>
-            <Text>{order.quantity}</Text>
-          </HStack>
-          <HStack justify="space-between" w="100%">
-            <Text fontWeight="bold">Unit Price:</Text>
-            <Text>₹{order.price}</Text>
-          </HStack>
-          <Divider />
-          <HStack justify="space-between" w="100%" fontWeight="bold" fontSize="lg">
-            <Text>Total Amount:</Text>
-            <Text color="green.600">₹{order.price * order.quantity}</Text>
-          </HStack>
         </VStack>
       </Box>
 

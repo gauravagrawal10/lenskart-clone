@@ -85,6 +85,52 @@ function Cart() {
         })
     }
 
+    const handleMoveToWishlist = async (item) => {
+        try {
+            // Add to wishlist
+            const wishlistItem = {
+                _id: item._id,
+                title: item.title,
+                price: item.price,
+                image: item.image,
+                size: item.size || 'M',
+                color: item.color || 'black',
+                rating: item.rating || 0
+            };
+
+            await axios.post(
+                `${process.env.REACT_APP_BASEURL}/wishlist/add`,
+                { userID: JSON.parse(localStorage.getItem('userData'))._id, item: wishlistItem },
+                { headers: { Authorization: `${token}` } }
+            );
+
+            // Remove from cart
+            await axios.delete(`${process.env.REACT_APP_BASEURL}/cart/delete/${item._id}`, {
+                headers: { Authorization: `${token}` }
+            });
+
+            toast({
+                title: 'Moved to Wishlist',
+                description: 'Item removed from cart',
+                status: 'success',
+                isClosable: true,
+                duration: 2000,
+                position: 'top'
+            });
+
+            getData();
+        } catch (err) {
+            console.error('Error moving to wishlist:', err);
+            toast({
+                title: 'Failed to move to wishlist',
+                status: 'error',
+                isClosable: true,
+                duration: 2000,
+                position: 'top'
+            });
+        }
+    };
+
     const totalPrice = cartData.reduce((acc, curr) => {
         const data = cartData.find(el => el._id === curr._id)
         return acc + (data.price * data.quantity)
@@ -127,6 +173,7 @@ function Cart() {
                                     <Text >{el.title}</Text>
                                     <HStack>
                                         <Button onClick={() => handleDelete(el._id)}><DeleteIcon />Remove</Button>
+                                        <Button colorScheme="teal" size="sm" onClick={() => handleMoveToWishlist(el)}>❤ Wishlist</Button>
                                     </HStack>
                                 </VStack>
                                 <VStack w={'40%'}>

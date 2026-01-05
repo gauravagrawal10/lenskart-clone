@@ -1,10 +1,12 @@
 require('dotenv').config();
 const connectDB = require('../configs/db');
+const bcrypt = require('bcrypt');
 const { AdminModel } = require('../model/Admin.model');
 const CartModel = require('../model/Cart.model');
 const { EyeglassesModel } = require('../model/Eyeglasses.model');
 const { OrderModel } = require('../model/Orders.model');
 const { UserModel } = require('../model/User.model');
+const WishlistModel = require('../model/Wishlist.model');
 
 const admins = [
   { name: 'Alice Admin', email: 'alice.admin@example.com', password: 'pass123', phone: 9000000001, role: 'admin' },
@@ -19,6 +21,12 @@ const admins = [
   { name: 'Jake Admin', email: 'jake.admin@example.com', password: 'pass123', phone: 9000000010, role: 'admin' }
 ];
 
+// Hash admin passwords before seeding to ensure login works with bcrypt.compare
+const adminsHashed = admins.map((a) => ({
+  ...a,
+  password: bcrypt.hashSync(a.password, 10),
+}));
+
 const users = [
   { name: 'User One', email: 'user1@example.com', password: 'userpass', phone: 9100000001, address: '101 Main St', role: 'user' },
   { name: 'User Two', email: 'user2@example.com', password: 'userpass', phone: 9100000002, address: '102 Main St', role: 'user' },
@@ -32,49 +40,92 @@ const users = [
   { name: 'User Ten', email: 'user10@example.com', password: 'userpass', phone: 9100000010, address: '110 Main St', role: 'user' }
 ];
 
-const eyeglasses = [
-  { title: 'Classic Square', size: 'M', rating: 4.5, price: 1299, shape: 'square', image: '/images/eye1.jpg', color: 'black' },
-  { title: 'Retro Round', size: 'L', rating: 4.2, price: 1499, shape: 'round', image: '/images/eye2.jpg', color: 'brown' },
-  { title: 'Aviator Slim', size: 'M', rating: 4.6, price: 1999, shape: 'aviator', image: '/images/eye3.jpg', color: 'gold' },
-  { title: 'Modern Cat', size: 'S', rating: 4.3, price: 1599, shape: 'cat-eye', image: '/images/eye4.jpg', color: 'tortoise' },
-  { title: 'Minimal Oval', size: 'M', rating: 4.0, price: 999, shape: 'oval', image: '/images/eye5.jpg', color: 'silver' },
-  { title: 'Bold Square', size: 'L', rating: 4.7, price: 2199, shape: 'square', image: '/images/eye6.jpg', color: 'black' },
-  { title: 'Thin Metal', size: 'M', rating: 4.1, price: 1199, shape: 'round', image: '/images/eye7.jpg', color: 'silver' },
-  { title: 'Sport Wrap', size: 'XL', rating: 4.4, price: 1799, shape: 'wrap', image: '/images/eye8.jpg', color: 'blue' },
-  { title: 'Vintage Hex', size: 'M', rating: 4.2, price: 1399, shape: 'hexagon', image: '/images/eye9.jpg', color: 'brown' },
-  { title: 'Eco Frame', size: 'S', rating: 4.0, price: 899, shape: 'round', image: '/images/eye10.jpg', color: 'green' }
-];
+const eyeglasses = Array.from({ length: 100 }, (_, i) => {
+  const id = i + 1;
+  const shapes = ['square', 'round', 'aviator', 'cat-eye', 'oval', 'hexagon', 'wrap'];
+  const colors = ['black', 'brown', 'gold', 'tortoise', 'silver', 'pink', 'red', 'blue', 'green', 'white', 'gray', 'purple', 'rose gold', 'clear', 'yellow', 'beige', 'navy', 'teal', 'burgundy', 'bronze'];
+  const sizes = ['S', 'M', 'L', 'XL'];
+  
+  return {
+    title: `Premium Eyeglasses ${id}`,
+    size: sizes[Math.floor(Math.random() * sizes.length)],
+    rating: (Math.random() * 0.9 + 3.9).toFixed(1),
+    price: Math.floor(Math.random() * 1500 + 799),
+    shape: shapes[Math.floor(Math.random() * shapes.length)],
+    image: `https://images.pexels.com/photos/371924/pexels-photo-371924.jpeg?w=400&h=400&fit=crop&id=${id}`,
+    color: colors[Math.floor(Math.random() * colors.length)]
+  };
+});
+
 
 const carts = [
-  { title: 'Classic Square', price: 1299, quantity: 1, image: '/images/eye1.jpg', userID: 'u1', userName: 'User One' },
-  { title: 'Retro Round', price: 1499, quantity: 2, image: '/images/eye2.jpg', userID: 'u2', userName: 'User Two' },
-  { title: 'Aviator Slim', price: 1999, quantity: 1, image: '/images/eye3.jpg', userID: 'u3', userName: 'User Three' },
-  { title: 'Modern Cat', price: 1599, quantity: 1, image: '/images/eye4.jpg', userID: 'u4', userName: 'User Four' },
-  { title: 'Minimal Oval', price: 999, quantity: 3, image: '/images/eye5.jpg', userID: 'u5', userName: 'User Five' },
-  { title: 'Bold Square', price: 2199, quantity: 1, image: '/images/eye6.jpg', userID: 'u6', userName: 'User Six' },
-  { title: 'Thin Metal', price: 1199, quantity: 2, image: '/images/eye7.jpg', userID: 'u7', userName: 'User Seven' },
-  { title: 'Sport Wrap', price: 1799, quantity: 1, image: '/images/eye8.jpg', userID: 'u8', userName: 'User Eight' },
-  { title: 'Vintage Hex', price: 1399, quantity: 1, image: '/images/eye9.jpg', userID: 'u9', userName: 'User Nine' },
-  { title: 'Eco Frame', price: 899, quantity: 4, image: '/images/eye10.jpg', userID: 'u10', userName: 'User Ten' }
+  { title: 'Classic Square Black', price: 1299, quantity: 1, image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop', userID: 'u1', userName: 'User One' },
+  { title: 'Retro Round Brown', price: 1499, quantity: 2, image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0816?w=400&h=400&fit=crop', userID: 'u2', userName: 'User Two' },
+  { title: 'Aviator Slim Gold', price: 1999, quantity: 1, image: 'https://images.unsplash.com/photo-1548681528-6a846cf17f18?w=400&h=400&fit=crop', userID: 'u3', userName: 'User Three' },
+  { title: 'Modern Cat Tortoise', price: 1599, quantity: 1, image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=400&fit=crop', userID: 'u4', userName: 'User Four' },
+  { title: 'Minimal Oval Silver', price: 999, quantity: 3, image: 'https://images.unsplash.com/photo-1567318735868-e71b99932e29?w=400&h=400&fit=crop', userID: 'u5', userName: 'User Five' },
+  { title: 'Bold Square Black', price: 2199, quantity: 1, image: 'https://images.unsplash.com/photo-1460289976868-a6b0b0874ef1?w=400&h=400&fit=crop', userID: 'u6', userName: 'User Six' },
+  { title: 'Thin Metal Silver', price: 1199, quantity: 2, image: 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=400&h=400&fit=crop', userID: 'u7', userName: 'User Seven' },
+  { title: 'Sport Wrap Blue', price: 1799, quantity: 1, image: 'https://images.unsplash.com/photo-1559933297-d4c60544cf4f?w=400&h=400&fit=crop', userID: 'u8', userName: 'User Eight' },
+  { title: 'Vintage Hex Brown', price: 1399, quantity: 1, image: 'https://images.unsplash.com/photo-1536086201745-9e1b55ba9f27?w=400&h=400&fit=crop', userID: 'u9', userName: 'User Nine' },
+  { title: 'Eco Frame Green', price: 899, quantity: 4, image: 'https://images.unsplash.com/photo-1549887534-f3270c88bef5?w=400&h=400&fit=crop', userID: 'u10', userName: 'User Ten' },
 ];
 
 const orders = [
-  { title: 'Classic Square', price: 1299, quantity: 1, image: '/images/eye1.jpg', userID: 'u1', userName: 'User One', status: 'Placed' },
-  { title: 'Retro Round', price: 1499, quantity: 1, image: '/images/eye2.jpg', userID: 'u2', userName: 'User Two', status: 'Shipped' },
-  { title: 'Aviator Slim', price: 1999, quantity: 1, image: '/images/eye3.jpg', userID: 'u3', userName: 'User Three', status: 'Delivered' },
-  { title: 'Modern Cat', price: 1599, quantity: 2, image: '/images/eye4.jpg', userID: 'u4', userName: 'User Four', status: 'Cancelled' },
-  { title: 'Minimal Oval', price: 999, quantity: 1, image: '/images/eye5.jpg', userID: 'u5', userName: 'User Five', status: 'Placed' },
-  { title: 'Bold Square', price: 2199, quantity: 1, image: '/images/eye6.jpg', userID: 'u6', userName: 'User Six', status: 'Placed' },
-  { title: 'Thin Metal', price: 1199, quantity: 3, image: '/images/eye7.jpg', userID: 'u7', userName: 'User Seven', status: 'Shipped' },
-  { title: 'Sport Wrap', price: 1799, quantity: 1, image: '/images/eye8.jpg', userID: 'u8', userName: 'User Eight', status: 'Delivered' },
-  { title: 'Vintage Hex', price: 1399, quantity: 1, image: '/images/eye9.jpg', userID: 'u9', userName: 'User Nine', status: 'Placed' },
-  { title: 'Eco Frame', price: 899, quantity: 2, image: '/images/eye10.jpg', userID: 'u10', userName: 'User Ten', status: 'Placed' }
+  { title: 'Classic Square Black', price: 1299, quantity: 1, image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop', userID: 'u1', userName: 'User One', status: 'Placed', createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) },
+  { title: 'Retro Round Brown', price: 1499, quantity: 1, image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0816?w=400&h=400&fit=crop', userID: 'u2', userName: 'User Two', status: 'Shipped', createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) },
+  { title: 'Aviator Slim Gold', price: 1999, quantity: 1, image: 'https://images.unsplash.com/photo-1548681528-6a846cf17f18?w=400&h=400&fit=crop', userID: 'u3', userName: 'User Three', status: 'Delivered', createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+  { title: 'Modern Cat Tortoise', price: 1599, quantity: 2, image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=400&h=400&fit=crop', userID: 'u4', userName: 'User Four', status: 'Placed', createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000) },
+  { title: 'Minimal Oval Silver', price: 999, quantity: 1, image: 'https://images.unsplash.com/photo-1567318735868-e71b99932e29?w=400&h=400&fit=crop', userID: 'u5', userName: 'User Five', status: 'Out for Delivery', createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) },
+  { title: 'Bold Square Black', price: 2199, quantity: 1, image: 'https://images.unsplash.com/photo-1460289976868-a6b0b0874ef1?w=400&h=400&fit=crop', userID: 'u6', userName: 'User Six', status: 'Placed', createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
+  { title: 'Thin Metal Silver', price: 1199, quantity: 3, image: 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=400&h=400&fit=crop', userID: 'u7', userName: 'User Seven', status: 'Shipped', createdAt: new Date(Date.now() - 4.5 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 4.5 * 24 * 60 * 60 * 1000) },
+  { title: 'Sport Wrap Blue', price: 1799, quantity: 1, image: 'https://images.unsplash.com/photo-1559933297-d4c60544cf4f?w=400&h=400&fit=crop', userID: 'u8', userName: 'User Eight', status: 'Delivered', createdAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000) },
+  { title: 'Vintage Hex Brown', price: 1399, quantity: 1, image: 'https://images.unsplash.com/photo-1536086201745-9e1b55ba9f27?w=400&h=400&fit=crop', userID: 'u9', userName: 'User Nine', status: 'Placed', createdAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 0.5 * 24 * 60 * 60 * 1000) },
+  { title: 'Eco Frame Green', price: 899, quantity: 2, image: 'https://images.unsplash.com/photo-1549887534-f3270c88bef5?w=400&h=400&fit=crop', userID: 'u10', userName: 'User Ten', status: 'Out for Delivery', createdAt: new Date(Date.now() - 5.5 * 24 * 60 * 60 * 1000), updatedAt: new Date(Date.now() - 5.5 * 24 * 60 * 60 * 1000) }
+];
+
+const wishlists = [
+  {
+    userID: 'u1',
+    items: [
+      { _id: 'p1', title: 'Premium Eyeglasses 1', price: 1299, image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop', size: 'M', color: 'black', rating: 4.5 },
+      { _id: 'p5', title: 'Premium Eyeglasses 5', price: 1199, image: 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=400&h=400&fit=crop', size: 'L', color: 'gold', rating: 4.2 }
+    ]
+  },
+  {
+    userID: 'u2',
+    items: [
+      { _id: 'p3', title: 'Premium Eyeglasses 3', price: 1599, image: 'https://images.unsplash.com/photo-1559933297-d4c60544cf4f?w=400&h=400&fit=crop', size: 'S', color: 'brown', rating: 4.8 },
+      { _id: 'p7', title: 'Premium Eyeglasses 7', price: 1399, image: 'https://images.unsplash.com/photo-1536086201745-9e1b55ba9f27?w=400&h=400&fit=crop', size: 'M', color: 'silver', rating: 4.3 },
+      { _id: 'p10', title: 'Premium Eyeglasses 10', price: 1299, image: 'https://images.unsplash.com/photo-1549887534-f3270c88bef5?w=400&h=400&fit=crop', size: 'L', color: 'tortoise', rating: 4.6 }
+    ]
+  },
+  {
+    userID: 'u3',
+    items: [
+      { _id: 'p2', title: 'Premium Eyeglasses 2', price: 1399, image: 'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=400&fit=crop', size: 'M', color: 'gold', rating: 4.4 }
+    ]
+  },
+  {
+    userID: 'u5',
+    items: [
+      { _id: 'p8', title: 'Premium Eyeglasses 8', price: 1299, image: 'https://images.unsplash.com/photo-1536086201745-9e1b55ba9f27?w=400&h=400&fit=crop', size: 'S', color: 'black', rating: 4.7 },
+      { _id: 'p12', title: 'Premium Eyeglasses 12', price: 1599, image: 'https://images.unsplash.com/photo-1559933297-d4c60544cf4f?w=400&h=400&fit=crop', size: 'L', color: 'pink', rating: 4.1 }
+    ]
+  }
 ];
 
 async function upsertMany(Model, items, filterFn) {
   let upserted = 0;
   for (const item of items) {
     const filter = filterFn(item);
+    const existingDoc = await Model.findOne(filter);
+    
+    // If document exists, preserve createdAt (for orders)
+    if (existingDoc && item.createdAt) {
+      item.createdAt = existingDoc.createdAt;
+    }
+    
     await Model.updateOne(filter, { $set: item }, { upsert: true });
     upserted++;
   }
@@ -84,7 +135,7 @@ async function upsertMany(Model, items, filterFn) {
 async function seed() {
   await connectDB();
 
-  const a = await upsertMany(AdminModel, admins, (d) => ({ email: d.email }));
+  const a = await upsertMany(AdminModel, adminsHashed, (d) => ({ email: d.email }));
   console.log(`Admins upserted: ${a}`);
 
   const u = await upsertMany(UserModel, users, (d) => ({ email: d.email }));
@@ -98,6 +149,9 @@ async function seed() {
 
   const o = await upsertMany(OrderModel, orders, (d) => ({ title: d.title, userID: d.userID }));
   console.log(`Orders upserted: ${o}`);
+
+  const w = await upsertMany(WishlistModel, wishlists, (d) => ({ userID: d.userID }));
+  console.log(`Wishlists upserted: ${w}`);
 
   console.log('Seeding complete.');
   process.exit(0);

@@ -9,8 +9,16 @@ const ordersSchema=mongoose.Schema({
     userName:{type:String,required:true},
     status: {
     type: String,
-    enum: ["Placed", "Shipped", "Delivered"],
+    enum: ["Placed", "Shipped", "Out for Delivery", "Delivered"],
     default: "Placed"
+    },
+    createdAt: {
+    type: Date,
+    default: Date.now
+    },
+    updatedAt: {
+    type: Date,
+    default: Date.now
     }
 },{
     versionKey:false
